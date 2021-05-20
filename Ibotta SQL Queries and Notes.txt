@@ -1,0 +1,42 @@
+1) What is the total counts of offer activations for each customer?
+
+SELECT CUSTOMER_ID, COUNT(OFFER_ID)
+FROM customer_offers
+WHERE ACTIVATED <> ""
+GROUP BY CUSTOMER_ID
+ORDER BY CUSTOMER_ID ASC;
+
+#Get the count of offers that were activated by each customer where activated is not empty. 
+
+2) Provide a list of customers that who haven't activated an offer in the last couple months?
+
+SELECT CUSTOMER_ID, ACTIVATED FROM customer_offers WHERE ACTIVATED = ''
+
+#Get the customer_ID and activated date where activated is empty. The dates for activated were all within the "last couple months" as the question said, so I only included the empty ones. If there were activated dates closer to May I would have used additional criteria in the where clause to only get those where the last activated date was > 2 months ago.
+
+3) What is the conversion rate of activated to complete for each customer?
+
+WITH FINISHED AS (
+SELECT CUSTOMER_ID, COUNT(FINISHED) AS REDEMPTIONS
+FROM customer_offer_rewards
+where FINISHED <> ''
+group by CUSTOMER_ID),
+ACTIVATED AS (
+SELECT CUSTOMER_ID, COUNT(CREATED_AT) AS ACTIVATIONS
+FROM customer_offer_rewards
+where CREATED_AT <> ''
+group by CUSTOMER_ID)
+SELECT FINISHED.CUSTOMER_ID, FINISHED.REDEMPTIONS, ACTIVATED.ACTIVATIONS, ROUND((CAST(FINISHED.REDEMPTIONS AS float)/CAST(ACTIVATED.ACTIVATIONS AS float) * 100),2) AS CONVERSION_RATE_PCT
+FROM FINISHED
+LEFT JOIN ACTIVATED ON FINISHED.customer_id = ACTIVATED.customer_id
+
+#Created CTES for the count of redemptions per customer and count of activations per customer. In both of those CTEs filtered out empty records for activated and finished because we didn't want ones that a customer did not activate/get verified. From the CTEs selected the counts and created a new column called conversion_rate_pct which is the count of redemptions divided by the count of activations * 100 for each customer. 
+
+4) What is the total amount of redemption for each customer?
+
+SELECT customer_offers.CUSTOMER_ID, SUM(customer_offer_redemptions.VERIFIED_REDEMPTION_COUNT * customer_offer_redemptions.OFFER_AMOUNT) as TOTAL_REDEEMED
+FROM customer_offers 
+INNER JOIN customer_offer_redemptions ON customer_offers.ID = customer_offer_redemptions.CUSTOMER_OFFER_ID
+GROUP BY customer_offers.CUSTOMER_ID
+
+#For each customer, sum all of their respective verified redemption count * offer amount for their offers, as some offers can be redeemed more than once so we don't want to just sum the offer amount. Used an inner join to join customer offer redemptions to customer offers in order to get only the verified offers.
